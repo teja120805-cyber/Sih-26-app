@@ -1,0 +1,25 @@
+name: sih26_companion
+description: "Personal Health Companion — Companion Console, a Flutter port of the SIH26181 web dashboard."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  # Dart 3.6 ships with Flutter 3.27, which introduced Color.withValues used here.
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/day_normal.csv
+    - assets/data/day_heatwave.csv
+    - assets/data/models.json
