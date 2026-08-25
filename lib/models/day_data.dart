@@ -192,6 +192,11 @@ class DayData {
     required this.movingCum,
     required this.heatCum,
     required this.standCum,
+    required this.hrExcess,
+    required this.pm25DoseCum,
+    required this.noiseDoseCum,
+    required this.doseHistory,
+    required this.acclimHistory,
     required this.stats,
   });
 
@@ -206,6 +211,9 @@ class DayData {
   final List<double> hrv, respRate, noise, lat, lon;
   final List<int> steps;
   final List<int> stepsCum, movingCum, heatCum, standCum;
+  final List<double> hrExcess, pm25DoseCum, noiseDoseCum;
+  final List<DoseDay> doseHistory;
+  final List<AcclimDay> acclimHistory;
   final DayStats stats;
 }
 
@@ -223,6 +231,9 @@ class DayStats {
     required this.totalSteps,
     required this.avgHRVsleep,
     required this.avgRespSleep,
+    required this.heatAdaptScore,
+    required this.todayPm25DoseRatio,
+    required this.todayNoiseDosePct,
   });
 
   final double avgHR;
@@ -237,9 +248,35 @@ class DayStats {
   final int totalSteps;
   final double avgHRVsleep;
   final double avgRespSleep;
+  final double heatAdaptScore;
+  final double todayPm25DoseRatio;
+  final double todayNoiseDosePct;
 }
 
-DayData computeDay(List<RawRow> raw, Profile prof, MlModels models) {
+/// One day in the 14-day exposure-dose history (13 illustrative + 1 real today).
+class DoseDay {
+  DoseDay({
+    required this.offset,
+    required this.pm25Ratio,
+    required this.noisePct,
+    required this.illustrative,
+  });
+  final int offset; // days ago (0 = today)
+  final double pm25Ratio;
+  final double noisePct;
+  final bool illustrative;
+}
+
+/// One day in the 14-day heat-acclimatization history.
+class AcclimDay {
+  AcclimDay({required this.offset, required this.score, required this.illustrative});
+  final int offset;
+  final double score;
+  final bool illustrative;
+}
+
+DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
+    {String scenarioKey = 'heatwave'}) {
   final ctc = models.coreTempConstants;
   final coreR = math.pow((ctc['sensorNoiseStd_degC'] as num).toDouble(), 2).toDouble();
   final coreQ = (ctc['processNoiseVar_degC2'] as num).toDouble();
@@ -263,7 +300,11 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models) {
       respRate = <double>[],
       noise = <double>[],
       lat = <double>[],
-      lon = <double>[];
+      lon = <double>[],
+      hrExcess = <double>[],
+      pm25DoseCum = <double>[],
+      noiseDoseCum = <double>[];
+  var runningPm25Dose = 0.0, runningNoiseDose = 0.0;
   final sleepStage = <String>[];
   final steps = <int>[];
   final tier = <int>[];
@@ -351,6 +392,15 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models) {
     final dHR = i >= 3 ? (thisHR - hr[i - 3]).abs() : 0.0;
     final dEx = i >= 3 ? (r.exertion - exertion[i - 3]).abs() : 1.0;
     suddenChange.add(i >= 3 && dHR > 22 && dEx < 0.15);
+
+    // Heat-acclimatization signal: HR above what exertion alone predicts.
+    hrExcess.add(thisHR - expectedHR);
+    // Environmental exposure dose, integrated over time.
+    runningPm25Dose += r.pm25 * (kStepMin / 60.0);
+    final allowedHoursAtLevel = 8 / math.pow(2, (r.noise - 90) / 5);
+    runningNoiseDose += (kStepMin / 60.0) / allowedHoursAtLevel * 100;
+    pm25DoseCum.add(runningPm25Dose);
+    noiseDoseCum.add(runningNoiseDose);
   }
 
   // ---- Events -----------------------------------------------------------
@@ -439,6 +489,23 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models) {
   final avgHRVsleep = sleepHRVvals.reduce((a, b) => a + b) / sleepHRVvals.length;
   final avgRespSleep = sleepRespVals.reduce((a, b) => a + b) / sleepRespVals.length;
 
+  // Today's real heat-acclimatization point: mean HR-above-expected while
+  // actually under heat exposure (WBGT >= 28°C).
+  final heatIdx = <int>[];
+  for (var k = 0; k < kN; k++) {
+    if (wbgt[k] >= 28) heatIdx.add(k);
+  }
+  final heatAdaptScore = heatIdx.isEmpty
+      ? 0.0
+      : heatIdx.map((k) => hrExcess[k]).reduce((a, b) => a + b) / heatIdx.length;
+
+  final todayPm25DoseRatio = pm25DoseCum[kN - 1] / (15 * 24); // vs WHO 24h guideline
+  final todayNoiseDosePct = noiseDoseCum[kN - 1];
+  final cal = models.calibration;
+  final doseHistory = buildDoseHistory(
+      cal, scenarioKey, prof.key, todayPm25DoseRatio, todayNoiseDosePct);
+  final acclimHistory = buildAcclimHistory(scenarioKey, prof.key, heatAdaptScore);
+
   return DayData(
     prof: prof,
     hr: hr,
@@ -468,6 +535,11 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models) {
     movingCum: movingCum,
     heatCum: heatCum,
     standCum: standCum,
+    hrExcess: hrExcess,
+    pm25DoseCum: pm25DoseCum,
+    noiseDoseCum: noiseDoseCum,
+    doseHistory: doseHistory,
+    acclimHistory: acclimHistory,
     stats: DayStats(
       avgHR: avgHR,
       minHR: minHR,
@@ -481,6 +553,9 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models) {
       totalSteps: runningSteps,
       avgHRVsleep: avgHRVsleep,
       avgRespSleep: avgRespSleep,
+      heatAdaptScore: heatAdaptScore,
+      todayPm25DoseRatio: todayPm25DoseRatio,
+      todayNoiseDosePct: todayNoiseDosePct,
     ),
   );
 }
@@ -673,4 +748,120 @@ const Map<String, Map<int, String>> _eventCopy = {
 String eventText(HealthEvent e) {
   final m = _eventCopy[e.type];
   return (m?[e.severity] ?? m?[1]) ?? e.type;
+}
+
+// ---- Deterministic seeded PRNG (mulberry32) for illustrative history --------
+
+int _hashSeed(String s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) {
+    h = (0x1fffffff & (31 * h + s.codeUnitAt(i)));
+  }
+  return h;
+}
+
+double Function() _mulberry32(int seed) {
+  var s = seed & 0xFFFFFFFF;
+  return () {
+    s = (s + 0x6D2B79F5) & 0xFFFFFFFF;
+    final t0 = ((s ^ (s >>> 15)) * (1 | s)) & 0xFFFFFFFF;
+    var t = (t0 + (((t0 ^ (t0 >>> 7)) * (61 | t0)) & 0xFFFFFFFF)) & 0xFFFFFFFF;
+    t = t ^ t0;
+    return ((t ^ (t >>> 14)) & 0xFFFFFFFF) / 4294967296.0;
+  };
+}
+
+/// 14-day exposure-dose history: days 0..12 illustrative (seeded, bounded by
+/// this build's real calibration stats), day 13 (today) is the real value.
+List<DoseDay> buildDoseHistory(Map<String, dynamic> cal, String scenarioKey,
+    String profileKey, double todayPm25Ratio, double todayNoisePct) {
+  double c(String k) => (cal[k] as num).toDouble();
+  final rng = _mulberry32(_hashSeed('dose:$scenarioKey:$profileKey'));
+  final days = <DoseDay>[];
+  for (var i = 0; i < 14; i++) {
+    final spike = rng() < 0.15;
+    final pm25 = spike
+        ? c('pm25P95') * (0.7 + 0.3 * rng())
+        : c('pm25CleanMedian') * 0.5 +
+            (c('pm25PoorP75') - c('pm25CleanMedian') * 0.5) * rng();
+    final pm25Ratio = _clamp(pm25 / 15, 0.1, 4.5);
+    final noiseLevel = c('noiseDayMedianDb') + (rng() - 0.5) * 14;
+    final noisePct =
+        _clamp(math.pow(2, (noiseLevel - 90) / 5) * 100 * (0.4 + 0.6 * rng()), 3, 145)
+            .toDouble();
+    days.add(DoseDay(
+        offset: 13 - i, pm25Ratio: pm25Ratio, noisePct: noisePct, illustrative: true));
+  }
+  days[13] = DoseDay(
+      offset: 0,
+      pm25Ratio: todayPm25Ratio,
+      noisePct: todayNoisePct,
+      illustrative: false);
+  return days;
+}
+
+/// 14-day heat-acclimatization history: 13 illustrative (seeded to trend down =
+/// adaptation), day 13 (today) is the real value.
+List<AcclimDay> buildAcclimHistory(
+    String scenarioKey, String profileKey, double todayScore) {
+  final rng = _mulberry32(_hashSeed('acclim:$scenarioKey:$profileKey'));
+  final slow = profileKey == 'vulnerable';
+  final start = 9 + rng() * 3;
+  final floor = slow ? 3.5 : 1.5;
+  final days = <AcclimDay>[];
+  for (var i = 0; i < 13; i++) {
+    final progress = i / 12;
+    final v = start -
+        (start - floor) * math.pow(progress, slow ? 0.7 : 1.1) +
+        (rng() - 0.5) * 1.6;
+    days.add(AcclimDay(offset: 12 - i, score: v.toDouble(), illustrative: true));
+  }
+  days.add(AcclimDay(offset: 0, score: todayScore, illustrative: false));
+  return days;
+}
+
+// ---- Ablation-based risk attribution ("Why this risk score, right now") -----
+
+class RiskContribution {
+  RiskContribution(this.feature, this.label, this.contribution);
+  final String feature; // HR / RR / TEMP / SPO2
+  final String label; // human label
+  final double contribution; // fullProb - swappedProb
+}
+
+class RiskAttribution {
+  RiskAttribution(this.fullProb, this.baselineProb, this.contributions);
+  final double fullProb;
+  final double baselineProb;
+  final List<RiskContribution> contributions;
+}
+
+const Map<String, String> _riskFeatureLabels = {
+  'HR': 'Heart rate',
+  'RR': 'Breathing rate',
+  'TEMP': 'Core temp',
+  'SPO2': 'SpO₂',
+};
+
+/// Per-feature ablation: how much swapping one live signal back to its personal
+/// baseline changes the vitals-risk probability, holding the others live.
+RiskAttribution attributeRisk(int i, DayData day, MlModels models) {
+  final prof = day.prof;
+  final live = <double>[day.hr[i], day.respRate[i], day.coreTemp[i], day.spo2[i]];
+  final baseline = <double>[prof.hr0, prof.rr0, prof.tc0, prof.spo20];
+  final fullProb = models.predictProbability(models.vitalsRisk, live);
+  final features = (models.vitalsRisk['features'] as List).cast<String>();
+  final contribs = <RiskContribution>[];
+  for (var k = 0; k < features.length; k++) {
+    final swapped = List<double>.from(live);
+    swapped[k] = baseline[k];
+    final swappedProb = models.predictProbability(models.vitalsRisk, swapped);
+    contribs.add(RiskContribution(
+      features[k],
+      _riskFeatureLabels[features[k]] ?? features[k],
+      fullProb - swappedProb,
+    ));
+  }
+  final baselineProb = models.predictProbability(models.vitalsRisk, baseline);
+  return RiskAttribution(fullProb, baselineProb, contribs);
 }

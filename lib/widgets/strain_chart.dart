@@ -40,13 +40,34 @@ class StrainChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 1.7,
-            child: CustomPaint(
-              painter: _StrainPainter(day: day, cursor: i, colors: c),
-              size: Size.infinite,
-            ),
-          ),
+          // Interactive: tap or drag anywhere on the chart to scrub the cursor.
+          LayoutBuilder(builder: (context, box) {
+            void scrubTo(double dx) {
+              const padL = 28.0, padR = 8.0;
+              final plotW = box.maxWidth - padL - padR;
+              if (plotW <= 0) return;
+              final frac = ((dx - padL) / plotW).clamp(0.0, 1.0);
+              if (s.playing) s.pause();
+              s.setCursor((frac * (kN - 1)).round());
+            }
+
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: (d) => scrubTo(d.localPosition.dx),
+              onHorizontalDragStart: (d) => scrubTo(d.localPosition.dx),
+              onHorizontalDragUpdate: (d) => scrubTo(d.localPosition.dx),
+              child: AspectRatio(
+                aspectRatio: 1.7,
+                child: CustomPaint(
+                  painter: _StrainPainter(day: day, cursor: i, colors: c),
+                  size: Size.infinite,
+                ),
+              ),
+            );
+          }),
+          const SizedBox(height: 6),
+          Text('Tap or drag the chart to scrub through the day',
+              style: TextStyle(fontSize: 10.5, color: c.faint)),
           const SizedBox(height: 10),
           _Legend(colors: c),
           const SizedBox(height: 10),

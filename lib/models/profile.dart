@@ -42,6 +42,38 @@ class Profile {
   final double cardioAge;
   final double cardioBmi;
 
+  Profile copyWith({
+    String? key,
+    String? label,
+    double? hr0,
+    double? l1,
+    double? l2,
+    double? l3,
+    double? cardioAge,
+    double? cardioBmi,
+  }) {
+    return Profile(
+      key: key ?? this.key,
+      label: label ?? this.label,
+      hr0: hr0 ?? this.hr0,
+      hr0Std: hr0Std,
+      skin0: skin0,
+      skin0Std: skin0Std,
+      tc0: tc0,
+      tc0Std: tc0Std,
+      rr0: rr0,
+      rr0Std: rr0Std,
+      spo20: spo20,
+      spo2Std: spo2Std,
+      l1: l1 ?? this.l1,
+      l2: l2 ?? this.l2,
+      l3: l3 ?? this.l3,
+      hrv0: hrv0,
+      cardioAge: cardioAge ?? this.cardioAge,
+      cardioBmi: cardioBmi ?? this.cardioBmi,
+    );
+  }
+
   static const standard = Profile(
     key: 'standard',
     label: 'Typical adult',

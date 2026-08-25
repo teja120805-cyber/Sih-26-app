@@ -4,20 +4,22 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 
 import '../models/day_data.dart';
+import '../models/medical_profile.dart';
 import '../models/ml_models.dart';
 import '../models/profile.dart';
 
-/// Holds all demo controls and the computed day, and notifies listeners on any
-/// change — the Flutter analogue of the web console's `state` object plus its
-/// re-render loop. Zero third-party dependencies.
+/// Holds all demo controls, the wearer's medical profile, and the computed day,
+/// and notifies listeners on any change.
 class ConsoleState extends ChangeNotifier {
-  // Demo controls (defaults match the web console).
+  // Demo controls.
   String scenario = 'heatwave'; // 'normal' | 'heatwave'
-  String profileKey = 'standard'; // 'standard' | 'vulnerable'
   bool network = true; // online / offline (map tiles)
   int cursor = 156; // sample index 0..287 (156 = 13:00)
   bool playing = false;
   int waterGlasses = 0;
+
+  // The wearer — drives the effective alert thresholds.
+  MedicalProfile medical = const MedicalProfile();
 
   bool loading = true;
   Object? loadError;
@@ -27,13 +29,16 @@ class ConsoleState extends ChangeNotifier {
   final Map<String, DayData> _dayCache = {};
   Timer? _timer;
 
-  Profile get profile => Profile.byKey(profileKey);
+  /// The effective wearer profile the pipeline runs on.
+  Profile get profile => medical.effectiveProfile();
+
+  MlModels? get models => _models;
 
   DayData? get day {
     if (_models == null) return null;
-    final key = '$scenario/$profileKey';
+    final key = '$scenario/${medical.signature}';
     return _dayCache[key] ??=
-        computeDay(_raw[scenario]!, profile, _models!);
+        computeDay(_raw[scenario]!, profile, _models!, scenarioKey: scenario);
   }
 
   int get cursorMinute => cursor * kStepMin;
@@ -64,11 +69,17 @@ class ConsoleState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setProfile(String p) {
-    if (p == profileKey) return;
-    profileKey = p;
+  void setMedical(MedicalProfile m) {
+    medical = m;
+    _dayCache.clear(); // thresholds changed → recompute on next access
     notifyListeners();
   }
+
+  void setAge(int age) => setMedical(medical.copyWith(age: age));
+  void setGender(Gender g) => setMedical(medical.copyWith(gender: g));
+  void setHeight(double cm) => setMedical(medical.copyWith(heightCm: cm));
+  void setWeight(double kg) => setMedical(medical.copyWith(weightKg: kg));
+  void toggleCondition(MedicalCondition c) => setMedical(medical.toggle(c));
 
   void setNetwork(bool online) {
     if (online == network) return;

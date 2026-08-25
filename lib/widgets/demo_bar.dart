@@ -1,84 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/profile.dart';
 import '../state/console_state.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';
 
-/// The "demo data controls" strip — not part of the product, but the way the
-/// console is explored: pick a scenario/profile, go online/offline, play the
-/// day forward, or scrub to any moment.
-class DemoBar extends StatelessWidget {
-  const DemoBar({super.key});
+/// Compact simulation controls: scenario (Normal / Heat-wave), online/offline,
+/// play the day forward, and a time scrubber. Not part of the product — the way
+/// the demo day is explored.
+class DemoControls extends StatelessWidget {
+  const DemoControls({super.key});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final s = ConsoleScope.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: c.panel,
-        border: Border(bottom: BorderSide(color: c.lineStrong)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.line),
       ),
       child: Column(
         children: [
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
-              _Segmented(
-                label: 'Day',
-                value: s.scenario,
-                options: const [
-                  ('normal', 'Normal'),
-                  ('heatwave', 'Heat-wave'),
-                ],
-                onChanged: s.setScenario,
-              ),
-              _Segmented(
-                label: 'Profile',
-                value: s.profileKey,
-                options: [
-                  ('standard', 'Typical adult'),
-                  ('vulnerable', 'Higher-risk'),
-                ],
-                onChanged: s.setProfile,
-              ),
-              _Segmented(
-                label: 'Net',
-                value: s.network ? 'on' : 'off',
-                options: const [
-                  ('on', 'Online'),
-                  ('off', 'Offline'),
-                ],
-                onChanged: (v) => s.setNetwork(v == 'on'),
-              ),
+              Icon(Icons.science_outlined, size: 15, color: c.faint),
+              const SizedBox(width: 6),
+              Text('Simulate',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: c.faint)),
+              const Spacer(),
+              _NetToggle(online: s.network, onTap: () {
+                HapticFeedback.selectionClick();
+                s.setNetwork(!s.network);
+              }),
             ],
           ),
           const SizedBox(height: 10),
+          _Segmented(
+            value: s.scenario,
+            options: const [
+              ('normal', 'Normal day', Icons.wb_sunny_outlined),
+              ('heatwave', 'Heat-wave', Icons.local_fire_department_outlined),
+            ],
+            onChanged: (v) {
+              HapticFeedback.selectionClick();
+              s.setScenario(v);
+            },
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
-              _PlayButton(
-                playing: s.playing,
-                onTap: s.togglePlay,
-              ),
+              _PlayButton(playing: s.playing, onTap: () {
+                HapticFeedback.lightImpact();
+                s.togglePlay();
+              }),
               const SizedBox(width: 12),
               _StatusDot(live: s.playing),
               const SizedBox(width: 6),
               SizedBox(
-                width: 48,
+                width: 46,
                 child: MonoText(s.cursorClock, size: 13, color: c.ink),
               ),
               Expanded(
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3,
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 7),
-                    overlayShape:
-                        const RoundSliderOverlayShape(overlayRadius: 14),
+                    trackHeight: 4,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
                     activeTrackColor: c.accent,
                     inactiveTrackColor: c.line,
                     thumbColor: c.accent,
@@ -102,63 +97,100 @@ class DemoBar extends StatelessWidget {
   }
 }
 
+class _NetToggle extends StatelessWidget {
+  const _NetToggle({required this.online, required this.onTap});
+  final bool online;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: online ? c.accentSoft : c.advisorySoft,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(online ? Icons.wifi : Icons.wifi_off,
+                size: 13, color: online ? c.accent : c.advisory),
+            const SizedBox(width: 5),
+            Text(online ? 'Online' : 'Offline',
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: online ? c.accent : c.advisory)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Segmented extends StatelessWidget {
   const _Segmented({
-    required this.label,
     required this.value,
     required this.options,
     required this.onChanged,
   });
 
-  final String label;
   final String value;
-  final List<(String, String)> options;
+  final List<(String, String, IconData)> options;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: Eyebrow(label),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: c.lineStrong),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < options.length; i++)
-                GestureDetector(
-                  onTap: () => onChanged(options[i].$1),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: value == options[i].$1 ? c.accent : c.panel,
-                      border: i == 0
-                          ? null
-                          : Border(left: BorderSide(color: c.lineStrong)),
-                    ),
-                    child: Text(
-                      options[i].$2,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: value == options[i].$1 ? c.onAccent : c.muted,
-                      ),
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: c.paper,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          for (final o in options)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(o.$1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: value == o.$1 ? c.panel : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: value == o.$1
+                        ? [
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2))
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(o.$3,
+                          size: 15,
+                          color: value == o.$1 ? c.accent : c.muted),
+                      const SizedBox(width: 6),
+                      Text(o.$2,
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: value == o.$1 ? c.ink : c.muted)),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ),
-      ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -173,28 +205,14 @@ class _PlayButton extends StatelessWidget {
     final c = context.colors;
     return Material(
       color: c.accent,
-      borderRadius: BorderRadius.circular(4),
+      shape: const CircleBorder(),
       child: InkWell(
-        borderRadius: BorderRadius.circular(4),
+        customBorder: const CircleBorder(),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(playing ? Icons.pause : Icons.play_arrow,
-                  size: 16, color: c.onAccent),
-              const SizedBox(width: 4),
-              Text(
-                playing ? 'Pause' : 'Play day',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: c.onAccent,
-                ),
-              ),
-            ],
-          ),
+          padding: const EdgeInsets.all(9),
+          child: Icon(playing ? Icons.pause : Icons.play_arrow,
+              size: 20, color: c.onAccent),
         ),
       ),
     );
@@ -227,16 +245,16 @@ class _StatusDotState extends State<_StatusDot>
     final c = context.colors;
     if (!widget.live) {
       return Container(
-        width: 7,
-        height: 7,
+        width: 8,
+        height: 8,
         decoration: BoxDecoration(color: c.faint, shape: BoxShape.circle),
       );
     }
     return FadeTransition(
-      opacity: Tween(begin: 0.35, end: 1.0).animate(_ctrl),
+      opacity: Tween(begin: 0.3, end: 1.0).animate(_ctrl),
       child: Container(
-        width: 7,
-        height: 7,
+        width: 8,
+        height: 8,
         decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
       ),
     );

@@ -72,17 +72,20 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: c.panel,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColorOverride ?? c.line),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: borderColorOverride ?? c.line.withValues(alpha: isDark ? 1 : 0.7)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: (isDark ? Colors.black : const Color(0xFF64748B))
+                .withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -92,7 +95,7 @@ class SectionCard extends StatelessWidget {
         children: [
           if (eyebrow != null || title != null || trailing != null) ...[
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
@@ -101,14 +104,15 @@ class SectionCard extends StatelessWidget {
                       if (eyebrow != null) Eyebrow(eyebrow!, color: c.accent),
                       if (title != null)
                         Padding(
-                          padding: EdgeInsets.only(top: eyebrow != null ? 4 : 0),
+                          padding: EdgeInsets.only(top: eyebrow != null ? 3 : 0),
                           child: Text(
                             title!,
                             style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
                               color: c.ink,
                               height: 1.15,
+                              letterSpacing: -0.3,
                             ),
                           ),
                         ),
@@ -118,7 +122,7 @@ class SectionCard extends StatelessWidget {
                 if (trailing != null) trailing!,
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
           ],
           child,
         ],

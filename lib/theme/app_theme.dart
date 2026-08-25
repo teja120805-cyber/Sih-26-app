@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Semantic colors ported verbatim from the Companion Console web dashboard
-/// (`dashboard/index.html` `:root` custom properties). Exposed as a
-/// [ThemeExtension] so any widget can read them via `Theme.of(context).colors`.
+/// Cool, modern health-app palette — deliberately distinct from the warm-paper
+/// web dashboard. Slate surfaces, a teal→indigo accent pair, and vivid status
+/// colors. Exposed as a [ThemeExtension] so any widget can read them via
+/// `context.colors`.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -14,6 +15,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.line,
     required this.lineStrong,
     required this.accent,
+    required this.accent2,
     required this.accentInk,
     required this.accentSoft,
     required this.ok,
@@ -36,6 +38,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color line;
   final Color lineStrong;
   final Color accent;
+  final Color accent2;
   final Color accentInk;
   final Color accentSoft;
   final Color ok;
@@ -49,7 +52,6 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color tempTrace;
   final Color onAccent;
 
-  /// Map a severity tier (0=ok .. 3=critical) to its color.
   Color tier(int t) => switch (t) {
         >= 3 => critical,
         2 => warning,
@@ -64,50 +66,55 @@ class AppColors extends ThemeExtension<AppColors> {
         _ => okSoft,
       };
 
+  /// The signature hero gradient.
+  List<Color> get heroGradient => [accent, accent2];
+
   static const light = AppColors(
-    paper: Color(0xFFF6F3EE),
-    panel: Color(0xFFFBF9F5),
-    ink: Color(0xFF1B1F23),
-    muted: Color(0xFF6B6459),
-    faint: Color(0xFF8C8478),
-    line: Color(0xFFDCD5C9),
-    lineStrong: Color(0xFFC7BEAF),
-    accent: Color(0xFF1E6E68),
-    accentInk: Color(0xFF0E3E3A),
-    accentSoft: Color(0x1A1E6E68),
-    ok: Color(0xFF3B7A4A),
-    okSoft: Color(0x1F3B7A4A),
-    advisory: Color(0xFFA9781F),
-    advisorySoft: Color(0x24A9781F),
-    warning: Color(0xFFB85A1E),
-    warningSoft: Color(0x24B85A1E),
-    critical: Color(0xFFAC3327),
-    criticalSoft: Color(0x21AC3327),
-    tempTrace: Color(0xFF8A6D3F),
-    onAccent: Color(0xFFF6F3EE),
+    paper: Color(0xFFEEF2F7),
+    panel: Color(0xFFFFFFFF),
+    ink: Color(0xFF0F172A),
+    muted: Color(0xFF64748B),
+    faint: Color(0xFF94A3B8),
+    line: Color(0xFFE2E8F0),
+    lineStrong: Color(0xFFCBD5E1),
+    accent: Color(0xFF0D9488),
+    accent2: Color(0xFF4F46E5),
+    accentInk: Color(0xFF0F766E),
+    accentSoft: Color(0x1A0D9488),
+    ok: Color(0xFF16A34A),
+    okSoft: Color(0x1A16A34A),
+    advisory: Color(0xFFD97706),
+    advisorySoft: Color(0x1FD97706),
+    warning: Color(0xFFEA580C),
+    warningSoft: Color(0x1FEA580C),
+    critical: Color(0xFFDC2626),
+    criticalSoft: Color(0x1FDC2626),
+    tempTrace: Color(0xFF9333EA),
+    onAccent: Color(0xFFFFFFFF),
   );
 
   static const dark = AppColors(
-    paper: Color(0xFF0F1215),
-    panel: Color(0xFF171B20),
-    ink: Color(0xFFECE7DC),
-    muted: Color(0xFF9B9488),
-    faint: Color(0xFF726C61),
-    line: Color(0xFF2A2E33),
-    lineStrong: Color(0xFF383D44),
-    accent: Color(0xFF4FBDB2),
-    accentInk: Color(0xFFBEEFE9),
-    accentSoft: Color(0x214FBDB2),
-    ok: Color(0xFF67AC72),
-    okSoft: Color(0x2467AC72),
-    advisory: Color(0xFFD9A544),
-    advisorySoft: Color(0x24D9A544),
-    warning: Color(0xFFE0813F),
-    warningSoft: Color(0x24E0813F),
-    critical: Color(0xFFE1685A),
-    criticalSoft: Color(0x26E1685A),
-    tempTrace: Color(0xFFC6A96E),
-    onAccent: Color(0xFF0E1A18),
+    paper: Color(0xFF0A0F1C),
+    panel: Color(0xFF141B2B),
+    ink: Color(0xFFE7ECF3),
+    muted: Color(0xFF94A3B8),
+    faint: Color(0xFF64748B),
+    line: Color(0xFF1F2937),
+    lineStrong: Color(0xFF334155),
+    accent: Color(0xFF2DD4BF),
+    accent2: Color(0xFF818CF8),
+    accentInk: Color(0xFF99F6E4),
+    accentSoft: Color(0x212DD4BF),
+    ok: Color(0xFF4ADE80),
+    okSoft: Color(0x214ADE80),
+    advisory: Color(0xFFFBBF24),
+    advisorySoft: Color(0x21FBBF24),
+    warning: Color(0xFFFB923C),
+    warningSoft: Color(0x21FB923C),
+    critical: Color(0xFFF87171),
+    criticalSoft: Color(0x21F87171),
+    tempTrace: Color(0xFFC084FC),
+    onAccent: Color(0xFF06231F),
   );
 
   @override
@@ -120,6 +127,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? line,
     Color? lineStrong,
     Color? accent,
+    Color? accent2,
     Color? accentInk,
     Color? accentSoft,
     Color? ok,
@@ -142,6 +150,7 @@ class AppColors extends ThemeExtension<AppColors> {
       line: line ?? this.line,
       lineStrong: lineStrong ?? this.lineStrong,
       accent: accent ?? this.accent,
+      accent2: accent2 ?? this.accent2,
       accentInk: accentInk ?? this.accentInk,
       accentSoft: accentSoft ?? this.accentSoft,
       ok: ok ?? this.ok,
@@ -160,34 +169,31 @@ class AppColors extends ThemeExtension<AppColors> {
   @override
   AppColors lerp(AppColors? other, double t) {
     if (other == null) return this;
+    Color l(Color a, Color b) => Color.lerp(a, b, t)!;
     return AppColors(
-      paper: Color.lerp(paper, other.paper, t)!,
-      panel: Color.lerp(panel, other.panel, t)!,
-      ink: Color.lerp(ink, other.ink, t)!,
-      muted: Color.lerp(muted, other.muted, t)!,
-      faint: Color.lerp(faint, other.faint, t)!,
-      line: Color.lerp(line, other.line, t)!,
-      lineStrong: Color.lerp(lineStrong, other.lineStrong, t)!,
-      accent: Color.lerp(accent, other.accent, t)!,
-      accentInk: Color.lerp(accentInk, other.accentInk, t)!,
-      accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
-      ok: Color.lerp(ok, other.ok, t)!,
-      okSoft: Color.lerp(okSoft, other.okSoft, t)!,
-      advisory: Color.lerp(advisory, other.advisory, t)!,
-      advisorySoft: Color.lerp(advisorySoft, other.advisorySoft, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      warningSoft: Color.lerp(warningSoft, other.warningSoft, t)!,
-      critical: Color.lerp(critical, other.critical, t)!,
-      criticalSoft: Color.lerp(criticalSoft, other.criticalSoft, t)!,
-      tempTrace: Color.lerp(tempTrace, other.tempTrace, t)!,
-      onAccent: Color.lerp(onAccent, other.onAccent, t)!,
+      paper: l(paper, other.paper),
+      panel: l(panel, other.panel),
+      ink: l(ink, other.ink),
+      muted: l(muted, other.muted),
+      faint: l(faint, other.faint),
+      line: l(line, other.line),
+      lineStrong: l(lineStrong, other.lineStrong),
+      accent: l(accent, other.accent),
+      accent2: l(accent2, other.accent2),
+      accentInk: l(accentInk, other.accentInk),
+      accentSoft: l(accentSoft, other.accentSoft),
+      ok: l(ok, other.ok),
+      okSoft: l(okSoft, other.okSoft),
+      advisory: l(advisory, other.advisory),
+      advisorySoft: l(advisorySoft, other.advisorySoft),
+      warning: l(warning, other.warning),
+      warningSoft: l(warningSoft, other.warningSoft),
+      critical: l(critical, other.critical),
+      criticalSoft: l(criticalSoft, other.criticalSoft),
+      tempTrace: l(tempTrace, other.tempTrace),
+      onAccent: l(onAccent, other.onAccent),
     );
   }
-}
-
-/// Convenience accessor: `Theme.of(context).colors`.
-extension AppColorsX on ThemeData {
-  AppColors get colors => extension<AppColors>()!;
 }
 
 extension AppColorsContextX on BuildContext {
@@ -220,6 +226,24 @@ class AppTheme {
       extensions: [c],
       dividerColor: c.line,
       splashFactory: InkSparkle.splashFactory,
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: c.panel,
+        indicatorColor: c.accentSoft,
+        elevation: 0,
+        height: 64,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: states.contains(WidgetState.selected) ? c.accent : c.muted,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? c.accent : c.muted,
+          ),
+        ),
+      ),
     );
   }
 
@@ -227,8 +251,7 @@ class AppTheme {
   static ThemeData get darkTheme => _base(Brightness.dark, AppColors.dark);
 }
 
-/// Monospace font stack for numeric readouts (matches the web's IBM Plex Mono).
-/// Not bundled — resolves to the platform monospace face, falling back safely.
+/// Monospace stack for numeric readouts (resolves to the platform mono face).
 const String kMonoFamily = 'monospace';
 const List<String> kMonoFallback = <String>[
   'RobotoMono',
@@ -238,7 +261,6 @@ const List<String> kMonoFallback = <String>[
   'monospace',
 ];
 
-/// Enable tabular (fixed-width) figures so numeric readouts don't jitter.
 const List<FontFeature> kTabularFigures = <FontFeature>[
   FontFeature.tabularFigures(),
 ];

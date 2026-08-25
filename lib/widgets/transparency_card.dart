@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models/day_data.dart';
 import '../state/console_state.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';

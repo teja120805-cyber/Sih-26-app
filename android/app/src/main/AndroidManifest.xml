@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Live OpenStreetMap tiles + PDF report sharing need network access. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="sih26_companion"
+        android:label="Health Companion"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
