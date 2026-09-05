@@ -82,6 +82,27 @@ class ConsoleState extends ChangeNotifier {
 
   void setName(String n) => setMedical(medical.copyWith(name: n));
   void setBloodType(String b) => setMedical(medical.copyWith(bloodType: b));
+  void setThreshold({
+    double? hrWarn,
+    double? hrCrit,
+    double? tempWarn,
+    double? tempCrit,
+    double? spo2Warn,
+    double? spo2Crit,
+    double? strainWarn,
+    double? strainCrit,
+  }) =>
+      setMedical(medical.copyWith(
+        hrWarn: hrWarn,
+        hrCrit: hrCrit,
+        tempWarn: tempWarn,
+        tempCrit: tempCrit,
+        spo2Warn: spo2Warn,
+        spo2Crit: spo2Crit,
+        strainWarn: strainWarn,
+        strainCrit: strainCrit,
+      ));
+  void resetThresholds() => setMedical(medical.clearThresholds());
   void setAge(int age) => setMedical(medical.copyWith(age: age));
   void setGender(Gender g) => setMedical(medical.copyWith(gender: g));
   void setHeight(double cm) => setMedical(medical.copyWith(heightCm: cm));
