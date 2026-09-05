@@ -44,29 +44,14 @@ class _ReportScreenState extends State<ReportScreen> {
     final act = computeActivity(i, day);
     final fired = day.events.where((e) => e.startMin <= s.cursorMinute).length;
 
-    return Stack(
+    return Scaffold(
+      appBar: AppBar(
+          title: const Text('Doctor report'), backgroundColor: c.paper),
+      body: Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 110),
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(2, 10, 2, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Doctor report',
-                      style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.6,
-                          color: c.ink)),
-                  const SizedBox(height: 2),
-                  Text('A one-page summary you can hand to a clinician',
-                      style: TextStyle(fontSize: 13.5, color: c.muted)),
-                ],
-              ),
-            ),
-
             // Document preview
             Container(
               decoration: BoxDecoration(
@@ -115,8 +100,10 @@ class _ReportScreenState extends State<ReportScreen> {
                   const SizedBox(height: 12),
                   Divider(color: c.line, height: 1),
                   _ReportSection(title: 'Patient', rows: [
+                    ('Name', m.name.trim().isEmpty ? '—' : m.name.trim()),
                     ('Age / Sex', '${m.age} yrs · ${m.gender.label}'),
                     ('BMI', '${m.bmi.toStringAsFixed(1)} (${bmiCategory(m.bmi)})'),
+                    ('Blood type', m.bloodType ?? '—'),
                     (
                       'Conditions',
                       m.conditions.isEmpty
@@ -233,6 +220,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 }

@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
-import 'screens/home_shell.dart';
+import 'screens/onboarding/login_screen.dart';
 import 'state/console_state.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const CompanionApp());
+}
+
+/// Holds the app's theme mode so any screen can toggle it via [ThemeScope].
+class ThemeController extends ChangeNotifier {
+  ThemeMode mode = ThemeMode.dark; // dark is the primary look
+  void toggle() {
+    mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    notifyListeners();
+  }
+}
+
+class ThemeScope extends InheritedNotifier<ThemeController> {
+  const ThemeScope({super.key, required ThemeController controller, required super.child})
+      : super(notifier: controller);
+  static ThemeController of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ThemeScope>()!.notifier!;
 }
 
 class CompanionApp extends StatefulWidget {
@@ -18,7 +35,7 @@ class CompanionApp extends StatefulWidget {
 
 class _CompanionAppState extends State<CompanionApp> {
   final ConsoleState _state = ConsoleState();
-  ThemeMode _themeMode = ThemeMode.system;
+  final ThemeController _theme = ThemeController();
 
   @override
   void initState() {
@@ -29,42 +46,34 @@ class _CompanionAppState extends State<CompanionApp> {
   @override
   void dispose() {
     _state.dispose();
+    _theme.dispose();
     super.dispose();
-  }
-
-  void _toggleTheme() {
-    final platformDark =
-        MediaQuery.maybeOf(context)?.platformBrightness == Brightness.dark;
-    setState(() {
-      _themeMode = switch (_themeMode) {
-        ThemeMode.system => platformDark ? ThemeMode.light : ThemeMode.dark,
-        ThemeMode.light => ThemeMode.dark,
-        ThemeMode.dark => ThemeMode.light,
-      };
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Health Companion',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _themeMode,
-      home: ConsoleScope(
-        state: _state,
-        child: _Root(themeMode: _themeMode, onToggleTheme: _toggleTheme),
+    return ThemeScope(
+      controller: _theme,
+      child: AnimatedBuilder(
+        animation: _theme,
+        builder: (context, _) => MaterialApp(
+          title: 'Health Companion',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: _theme.mode,
+          builder: (context, child) =>
+              ConsoleScope(state: _state, child: child!),
+          home: const _Root(),
+        ),
       ),
     );
   }
 }
 
-/// Gates the app on data load, then shows the tabbed shell.
+/// Gates on data load, then shows the login/onboarding flow.
 class _Root extends StatelessWidget {
-  const _Root({required this.themeMode, required this.onToggleTheme});
-  final ThemeMode themeMode;
-  final VoidCallback onToggleTheme;
+  const _Root();
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +92,7 @@ class _Root extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text('Could not load data',
                     style: TextStyle(
-                        color: c.ink,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
+                        color: c.ink, fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text('${s.loadError}',
                     textAlign: TextAlign.center,
@@ -98,8 +105,7 @@ class _Root extends StatelessWidget {
     }
 
     if (s.loading) return const _Splash();
-
-    return HomeShell(themeMode: themeMode, onToggleTheme: onToggleTheme);
+    return const LoginScreen();
   }
 }
 
@@ -130,12 +136,9 @@ class _Splash extends StatelessWidget {
               child: const Icon(Icons.favorite, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
-            Text('Health Companion',
+            Text('Companion Console',
                 style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                    color: c.ink)),
+                    fontSize: 19, fontWeight: FontWeight.w800, color: c.ink)),
             const SizedBox(height: 6),
             Text('Loading sensor data & models…',
                 style: TextStyle(fontSize: 13, color: c.muted)),

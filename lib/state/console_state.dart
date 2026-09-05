@@ -37,8 +37,13 @@ class ConsoleState extends ChangeNotifier {
   DayData? get day {
     if (_models == null) return null;
     final key = '$scenario/${medical.signature}';
-    return _dayCache[key] ??=
-        computeDay(_raw[scenario]!, profile, _models!, scenarioKey: scenario);
+    return _dayCache[key] ??= computeDay(
+      _raw[scenario]!,
+      profile,
+      _models!,
+      scenarioKey: scenario,
+      male: medical.gender == Gender.male ? 1.0 : 0.0,
+    );
   }
 
   int get cursorMinute => cursor * kStepMin;
@@ -75,6 +80,8 @@ class ConsoleState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setName(String n) => setMedical(medical.copyWith(name: n));
+  void setBloodType(String b) => setMedical(medical.copyWith(bloodType: b));
   void setAge(int age) => setMedical(medical.copyWith(age: age));
   void setGender(Gender g) => setMedical(medical.copyWith(gender: g));
   void setHeight(double cm) => setMedical(medical.copyWith(heightCm: cm));
@@ -151,6 +158,13 @@ class ConsoleScope extends InheritedNotifier<ConsoleState> {
   static ConsoleState of(BuildContext context) {
     final scope =
         context.dependOnInheritedWidgetOfExactType<ConsoleScope>();
+    assert(scope != null, 'No ConsoleScope found in context');
+    return scope!.notifier!;
+  }
+
+  /// Reads the state without subscribing to rebuilds — safe in initState.
+  static ConsoleState read(BuildContext context) {
+    final scope = context.findAncestorWidgetOfExactType<ConsoleScope>();
     assert(scope != null, 'No ConsoleScope found in context');
     return scope!.notifier!;
   }

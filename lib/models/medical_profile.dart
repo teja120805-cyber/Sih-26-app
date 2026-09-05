@@ -37,17 +37,21 @@ enum MedicalCondition {
 /// a single risk score → a threshold multiplier that makes alerts fire earlier.
 class MedicalProfile {
   const MedicalProfile({
+    this.name = '',
     this.age = 34,
     this.gender = Gender.other,
     this.heightCm = 170,
     this.weightKg = 68,
+    this.bloodType,
     this.conditions = const {},
   });
 
+  final String name;
   final int age;
   final Gender gender;
   final double heightCm;
   final double weightKg;
+  final String? bloodType;
   final Set<MedicalCondition> conditions;
 
   double get bmi {
@@ -114,17 +118,21 @@ class MedicalProfile {
   }
 
   MedicalProfile copyWith({
+    String? name,
     int? age,
     Gender? gender,
     double? heightCm,
     double? weightKg,
+    String? bloodType,
     Set<MedicalCondition>? conditions,
   }) {
     return MedicalProfile(
+      name: name ?? this.name,
       age: age ?? this.age,
       gender: gender ?? this.gender,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
+      bloodType: bloodType ?? this.bloodType,
       conditions: conditions ?? this.conditions,
     );
   }

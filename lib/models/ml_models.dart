@@ -28,6 +28,8 @@ class MlModels {
       _root['vitalsRisk'] as Map<String, dynamic>;
   Map<String, dynamic> get cardioRisk =>
       _root['cardioRisk'] as Map<String, dynamic>;
+  Map<String, dynamic>? get cardioRiskLive =>
+      _root['cardioRiskLive'] as Map<String, dynamic>?;
   Map<String, dynamic> get sleepQuality =>
       _root['sleepQuality'] as Map<String, dynamic>;
   Map<String, dynamic> get coreTempConstants =>

@@ -197,6 +197,9 @@ class DayData {
     required this.noiseDoseCum,
     required this.doseHistory,
     required this.acclimHistory,
+    required this.cardioLive,
+    required this.rhrHistory,
+    required this.hourlySteps,
     required this.stats,
   });
 
@@ -214,6 +217,9 @@ class DayData {
   final List<double> hrExcess, pm25DoseCum, noiseDoseCum;
   final List<DoseDay> doseHistory;
   final List<AcclimDay> acclimHistory;
+  final List<double> cardioLive;
+  final List<AcclimDay> rhrHistory; // reuses AcclimDay shape: score = resting HR
+  final List<int> hourlySteps;
   final DayStats stats;
 }
 
@@ -234,6 +240,9 @@ class DayStats {
     required this.heatAdaptScore,
     required this.todayPm25DoseRatio,
     required this.todayNoiseDosePct,
+    required this.sleepEfficiency,
+    required this.readiness,
+    required this.rhrToday,
   });
 
   final double avgHR;
@@ -251,6 +260,9 @@ class DayStats {
   final double heatAdaptScore;
   final double todayPm25DoseRatio;
   final double todayNoiseDosePct;
+  final double sleepEfficiency;
+  final int readiness;
+  final double rhrToday;
 }
 
 /// One day in the 14-day exposure-dose history (13 illustrative + 1 real today).
@@ -276,7 +288,7 @@ class AcclimDay {
 }
 
 DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
-    {String scenarioKey = 'heatwave'}) {
+    {String scenarioKey = 'heatwave', double male = 0.5}) {
   final ctc = models.coreTempConstants;
   final coreR = math.pow((ctc['sensorNoiseStd_degC'] as num).toDouble(), 2).toDouble();
   final coreQ = (ctc['processNoiseVar_degC2'] as num).toDouble();
@@ -295,6 +307,7 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
       psi = <double>[],
       anomaly = <double>[],
       popRisk = <double>[],
+      cardioLive = <double>[],
       vitalsRisk = <double>[],
       hrv = <double>[],
       respRate = <double>[],
@@ -382,6 +395,17 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
       [thisHR, r.respRate, x, r.spo2],
     ));
     popRisk.add(cardioProb);
+
+    // Cardiovascular risk (LIVE) — logistic regression that moves with live HR.
+    final liveModel = models.cardioRiskLive;
+    if (liveModel != null) {
+      cardioLive.add(models.predictProbability(
+        liveModel,
+        [prof.cardioAge, male, prof.cardioBmi, thisHR],
+      ));
+    } else {
+      cardioLive.add(cardioProb);
+    }
 
     final isSleep = r.sleepStage != 'Awake';
     final expectedHR = prof.hr0 + r.exertion * 90;
@@ -506,6 +530,35 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
       cal, scenarioKey, prof.key, todayPm25DoseRatio, todayNoiseDosePct);
   final acclimHistory = buildAcclimHistory(scenarioKey, prof.key, heatAdaptScore);
 
+  // Sleep efficiency: fraction of the ~6h in-bed window actually asleep.
+  final inBedMin = 72 * kStepMin;
+  final asleepMin = deepMinutes + lightMinutes + remMinutes;
+  final sleepEfficiency = inBedMin > 0 ? asleepMin / inBedMin * 100 : 0.0;
+
+  // Resting HR today: minimum HR during the overnight sleep window.
+  final rhrToday = hr.sublist(0, 72).reduce(math.min);
+
+  // Readiness (WHOOP/Oura-style transparent composite) — once per day.
+  final peakPsi = psi.reduce(math.max);
+  final readiness = _clamp(
+    _clamp(avgHRVsleep / 100.0, 0, 1) * 35.0 +
+        math.max(0, 1 - (rhrToday - 40) / 40) * 25.0 +
+        math.max(0, 1 - (avgRespSleep - 10) / 10) * 15.0 +
+        (sleepQuality / 100.0) * 25.0 -
+        math.max(0, peakPsi - 5.0) * 2.0,
+    0,
+    100,
+  );
+
+  // 14-day resting-HR trend (13 illustrative seeded + today real).
+  final rhrHistory = buildRhrHistory(scenarioKey, prof.key, rhrToday, prof.hr0);
+
+  // Hourly step counts (24 buckets) for the activity bar chart.
+  final hourlySteps = List<int>.filled(24, 0);
+  for (var k = 0; k < kN; k++) {
+    hourlySteps[(k * kStepMin) ~/ 60] += steps[k];
+  }
+
   return DayData(
     prof: prof,
     hr: hr,
@@ -540,6 +593,9 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
     noiseDoseCum: noiseDoseCum,
     doseHistory: doseHistory,
     acclimHistory: acclimHistory,
+    cardioLive: cardioLive,
+    rhrHistory: rhrHistory,
+    hourlySteps: hourlySteps,
     stats: DayStats(
       avgHR: avgHR,
       minHR: minHR,
@@ -556,6 +612,9 @@ DayData computeDay(List<RawRow> raw, Profile prof, MlModels models,
       heatAdaptScore: heatAdaptScore,
       todayPm25DoseRatio: todayPm25DoseRatio,
       todayNoiseDosePct: todayNoiseDosePct,
+      sleepEfficiency: sleepEfficiency,
+      readiness: readiness.round(),
+      rhrToday: rhrToday,
     ),
   );
 }
@@ -817,6 +876,24 @@ List<AcclimDay> buildAcclimHistory(
     days.add(AcclimDay(offset: 12 - i, score: v.toDouble(), illustrative: true));
   }
   days.add(AcclimDay(offset: 0, score: todayScore, illustrative: false));
+  return days;
+}
+
+/// 14-day resting-HR trend: 13 illustrative (seeded, autoregressive drift around
+/// the personal baseline) + today's real value. A rising trend without extra
+/// activity is a classic early-illness / overtraining signal.
+List<AcclimDay> buildRhrHistory(
+    String scenarioKey, String profileKey, double todayRhr, double baseline) {
+  final rng = _mulberry32(_hashSeed('rhr:$scenarioKey:$profileKey'));
+  final days = <AcclimDay>[];
+  var v = baseline - 4 + rng() * 3; // resting HR sits a little below waking HR0
+  for (var i = 0; i < 13; i++) {
+    // autoregressive drift so illustrative runs wander realistically
+    v += (rng() - 0.5) * 2.4;
+    v = _clamp(v, baseline - 10, baseline + 8);
+    days.add(AcclimDay(offset: 13 - i, score: v, illustrative: true));
+  }
+  days.add(AcclimDay(offset: 0, score: todayRhr, illustrative: false));
   return days;
 }
 

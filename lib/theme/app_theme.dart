@@ -69,18 +69,19 @@ class AppColors extends ThemeExtension<AppColors> {
   /// The signature hero gradient.
   List<Color> get heroGradient => [accent, accent2];
 
+  // Clean light variant (secondary — app defaults to dark).
   static const light = AppColors(
     paper: Color(0xFFEEF2F7),
     panel: Color(0xFFFFFFFF),
-    ink: Color(0xFF0F172A),
-    muted: Color(0xFF64748B),
+    ink: Color(0xFF0F1B2E),
+    muted: Color(0xFF5A6B85),
     faint: Color(0xFF94A3B8),
     line: Color(0xFFE2E8F0),
     lineStrong: Color(0xFFCBD5E1),
-    accent: Color(0xFF0D9488),
-    accent2: Color(0xFF4F46E5),
-    accentInk: Color(0xFF0F766E),
-    accentSoft: Color(0x1A0D9488),
+    accent: Color(0xFF2563EB),
+    accent2: Color(0xFF0891B2),
+    accentInk: Color(0xFF1D4ED8),
+    accentSoft: Color(0x142563EB),
     ok: Color(0xFF16A34A),
     okSoft: Color(0x1A16A34A),
     advisory: Color(0xFFD97706),
@@ -93,28 +94,29 @@ class AppColors extends ThemeExtension<AppColors> {
     onAccent: Color(0xFFFFFFFF),
   );
 
+  // Dark navy — the primary look (from the UI/UX spec, polished).
   static const dark = AppColors(
-    paper: Color(0xFF0A0F1C),
-    panel: Color(0xFF141B2B),
-    ink: Color(0xFFE7ECF3),
-    muted: Color(0xFF94A3B8),
-    faint: Color(0xFF64748B),
-    line: Color(0xFF1F2937),
-    lineStrong: Color(0xFF334155),
-    accent: Color(0xFF2DD4BF),
-    accent2: Color(0xFF818CF8),
-    accentInk: Color(0xFF99F6E4),
-    accentSoft: Color(0x212DD4BF),
-    ok: Color(0xFF4ADE80),
-    okSoft: Color(0x214ADE80),
+    paper: Color(0xFF080C16),
+    panel: Color(0xFF121A2B),
+    ink: Color(0xFFEAF1FB),
+    muted: Color(0xFF9DB0CC),
+    faint: Color(0xFF5B6B86),
+    line: Color(0xFF223049),
+    lineStrong: Color(0xFF33456A),
+    accent: Color(0xFF4A90E2),
+    accent2: Color(0xFF00D4FF),
+    accentInk: Color(0xFF8CC4FF),
+    accentSoft: Color(0x1F4A90E2),
+    ok: Color(0xFF34D399),
+    okSoft: Color(0x2134D399),
     advisory: Color(0xFFFBBF24),
     advisorySoft: Color(0x21FBBF24),
     warning: Color(0xFFFB923C),
     warningSoft: Color(0x21FB923C),
-    critical: Color(0xFFF87171),
-    criticalSoft: Color(0x21F87171),
+    critical: Color(0xFFFF5A5A),
+    criticalSoft: Color(0x24FF5A5A),
     tempTrace: Color(0xFFC084FC),
-    onAccent: Color(0xFF06231F),
+    onAccent: Color(0xFFFFFFFF),
   );
 
   @override

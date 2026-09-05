@@ -203,8 +203,10 @@ Future<Uint8List> buildReportPdf(ConsoleState s) async {
 
         sectionTitle('PATIENT'),
         card([
+          kv('Name', m.name.trim().isEmpty ? '—' : m.name.trim()),
           kv('Age / Sex', '${m.age} years · ${m.gender.label}'),
           kv('BMI', '${m.bmi.toStringAsFixed(1)} (${bmiCategory(m.bmi)})'),
+          kv('Blood type', m.bloodType ?? '—'),
           kv('Reported conditions', conds),
           kv('Overall risk level', m.riskLevel),
           kv('Alert sensitivity',
