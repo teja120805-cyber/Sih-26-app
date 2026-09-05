@@ -2,7 +2,7 @@ import 'day_data.dart';
 import 'medical_profile.dart';
 
 /// Overall, plain-language health status at a moment — driven by the wearer's
-/// own warn/crit thresholds for heart rate, core temp, SpO₂ and strain.
+/// warn/crit thresholds for heart rate, core temp, SpO₂ and strain.
 class HealthStatus {
   HealthStatus({
     required this.level, // 0 normal · 2 warning · 3 critical
@@ -16,14 +16,14 @@ class HealthStatus {
   final String title;
   final String message;
   final List<String> actions;
-  final String triggered; // which signal drove it (or 'none')
+  final String triggered;
 
   bool get isCritical => level >= 3;
   bool get isWarning => level == 2;
   bool get isNormal => level == 0;
 }
 
-int _metricLevel(double v, double warn, double crit, {bool lowerWorse = false}) {
+int _lvl(double v, double warn, double crit, {bool lowerWorse = false}) {
   if (lowerWorse) {
     if (v <= crit) return 3;
     if (v <= warn) return 2;
@@ -34,21 +34,13 @@ int _metricLevel(double v, double warn, double crit, {bool lowerWorse = false}) 
   return 0;
 }
 
-/// Computes the overall status for sample [i] using the wearer's thresholds.
 HealthStatus computeStatus(int i, DayData day, MedicalProfile m) {
-  final strain = day.psi[i];
-  final hr = day.hr[i];
-  final temp = day.coreTemp[i];
-  final spo2 = day.spo2[i];
-
   final levels = <String, int>{
-    'strain': _metricLevel(strain, m.effStrainWarn, m.effStrainCrit),
-    'temp': _metricLevel(temp, m.effTempWarn, m.effTempCrit),
-    'hr': _metricLevel(hr, m.effHrWarn, m.effHrCrit),
-    'spo2': _metricLevel(spo2, m.effSpo2Warn, m.effSpo2Crit, lowerWorse: true),
+    'strain': _lvl(day.psi[i], m.effStrainWarn, m.effStrainCrit),
+    'temp': _lvl(day.coreTemp[i], m.effTempWarn, m.effTempCrit),
+    'hr': _lvl(day.hr[i], m.effHrWarn, m.effHrCrit),
+    'spo2': _lvl(day.spo2[i], m.effSpo2Warn, m.effSpo2Crit, lowerWorse: true),
   };
-
-  // Worst level; priority on ties: heat/strain, then SpO₂, then HR.
   const order = ['strain', 'temp', 'spo2', 'hr'];
   var worst = 'none';
   var worstLevel = 0;
@@ -63,12 +55,11 @@ HealthStatus computeStatus(int i, DayData day, MedicalProfile m) {
     return HealthStatus(
       level: 0,
       title: "You're doing well",
-      message: 'All your key signs are within the limits you set. Carry on as normal.',
+      message: 'All your key signs are within a safe range. Carry on as normal.',
       actions: const ['Stay hydrated', 'Keep up your normal activity'],
       triggered: 'none',
     );
   }
-
   final crit = worstLevel >= 3;
   switch (worst) {
     case 'strain':
@@ -92,11 +83,10 @@ HealthStatus computeStatus(int i, DayData day, MedicalProfile m) {
             ? 'Your oxygen level has dropped below your safe limit. Rest and breathe slowly; seek help if it stays low.'
             : 'Your oxygen level is a little low. Slow down and breathe steadily.',
         actions: crit
-            ? const ['Sit down and rest', 'Breathe slowly and deeply', 'Seek medical help if it persists']
+            ? const ['Sit and rest', 'Breathe slowly and deeply', 'Seek help if it persists']
             : const ['Ease your activity', 'Move to fresh air'],
         triggered: worst,
       );
-    case 'hr':
     default:
       return HealthStatus(
         level: worstLevel,
@@ -116,39 +106,12 @@ HealthStatus computeStatus(int i, DayData day, MedicalProfile m) {
 
 ({String label, String meaning}) bodyStress(double anomaly0to10) {
   if (anomaly0to10 >= 7) {
-    return (
-      label: 'High',
-      meaning:
-          'Your vital signs are behaving unusually together — a sign your body may be under stress. Rest, hydrate, and recheck shortly; get help if you feel unwell.'
-    );
+    return (label: 'High', meaning: 'Your vital signs are behaving unusually together — a sign your body may be under stress. Rest, hydrate and recheck shortly.');
   }
   if (anomaly0to10 >= 4) {
-    return (
-      label: 'Noticeable',
-      meaning:
-          'An unusual mix of readings for you — could be early stress or exertion. Ease off and keep an eye on how you feel.'
-    );
+    return (label: 'Noticeable', meaning: 'An unusual mix of readings for you — could be early stress or exertion. Ease off and watch how you feel.');
   }
-  return (
-    label: 'Low',
-    meaning: 'Your vital signs are behaving normally together — nothing unusual right now.'
-  );
-}
-
-({String label, String meaning}) vitalsRiskWord(double p) {
-  if (p >= 0.6) {
-    return (
-      label: 'High',
-      meaning: 'Your current vitals suggest you should stop, cool down and drink water.'
-    );
-  }
-  if (p >= 0.4) {
-    return (
-      label: 'Elevated',
-      meaning: 'Keep an eye on how you feel and take it a little easier.'
-    );
-  }
-  return (label: 'Low', meaning: 'Your current vitals look reassuring.');
+  return (label: 'Low', meaning: 'Your vital signs are behaving normally together — nothing unusual right now.');
 }
 
 String hrGuidance(double hr, double baseline, double warn) {
@@ -158,9 +121,7 @@ String hrGuidance(double hr, double baseline, double warn) {
 }
 
 String hrvGuidance(double hrv, double hrv0) {
-  if (hrv < hrv0 - 12) {
-    return 'Lower than your usual — a sign to prioritise rest, hydration and an early night.';
-  }
+  if (hrv < hrv0 - 12) return 'Lower than usual — prioritise rest, hydration and an early night.';
   if (hrv > hrv0 + 8) return 'Higher than usual — a good recovery sign.';
   return 'Around your normal — recovery looks steady.';
 }

@@ -268,6 +268,27 @@ class Pill extends StatelessWidget {
   }
 }
 
+/// A single-color soft status pill (e.g. "Normal", "Elevated", "Critical").
+class StatusPill extends StatelessWidget {
+  const StatusPill(this.text, {super.key, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 11.5, fontWeight: FontWeight.w800, color: color)),
+    );
+  }
+}
+
 /// A labelled horizontal bar showing a reading against a threshold.
 class ThresholdBar extends StatelessWidget {
   const ThresholdBar({

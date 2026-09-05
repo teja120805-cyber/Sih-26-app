@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
-import '../home_shell.dart';
+import 'profile_setup_screen.dart';
 
 /// Demo login — no real authentication (matches the on-device / offline model).
 /// "Log in" simply enters the onboarding flow.
@@ -26,8 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _enter() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeShell()),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
     );
   }
 

@@ -44,14 +44,6 @@ class MedicalProfile {
     this.weightKg = 68,
     this.bloodType,
     this.conditions = const {},
-    this.hrWarn,
-    this.hrCrit,
-    this.tempWarn,
-    this.tempCrit,
-    this.spo2Warn,
-    this.spo2Crit,
-    this.strainWarn,
-    this.strainCrit,
   });
 
   final String name;
@@ -61,33 +53,6 @@ class MedicalProfile {
   final double weightKg;
   final String? bloodType;
   final Set<MedicalCondition> conditions;
-
-  // User-set alert thresholds (null → sensible default from risk profile).
-  final double? hrWarn, hrCrit;
-  final double? tempWarn, tempCrit;
-  final double? spo2Warn, spo2Crit; // lower is worse
-  final double? strainWarn, strainCrit;
-
-  // Resolved thresholds actually used by the alert engine.
-  double get effHrWarn => hrWarn ?? (110 * thresholdMultiplier);
-  double get effHrCrit => hrCrit ?? (140 * thresholdMultiplier);
-  double get effTempWarn => tempWarn ?? (37.8 - (1 - thresholdMultiplier) * 0.6);
-  double get effTempCrit => tempCrit ?? (38.6 - (1 - thresholdMultiplier) * 0.6);
-  double get effSpo2Warn =>
-      spo2Warn ?? (94 + (1 - thresholdMultiplier) * 10).clamp(90, 97);
-  double get effSpo2Crit =>
-      spo2Crit ?? (90 + (1 - thresholdMultiplier) * 8).clamp(85, 94);
-  double get effStrainWarn => strainWarn ?? effectiveProfile().l2;
-  double get effStrainCrit => strainCrit ?? effectiveProfile().l3;
-  bool get hasCustomThresholds =>
-      hrWarn != null ||
-      hrCrit != null ||
-      tempWarn != null ||
-      tempCrit != null ||
-      spo2Warn != null ||
-      spo2Crit != null ||
-      strainWarn != null ||
-      strainCrit != null;
 
   double get bmi {
     final m = heightCm / 100.0;
@@ -128,6 +93,17 @@ class MedicalProfile {
   /// How many percent earlier alerts fire vs. a typical adult.
   int get earlierByPct => ((1 - thresholdMultiplier) * 100).round();
 
+  // Resolved alert thresholds (derived from the risk profile) used by the
+  // qualitative status engine and shown on the conditions screen.
+  double get effHrWarn => 110 * thresholdMultiplier;
+  double get effHrCrit => 140 * thresholdMultiplier;
+  double get effTempWarn => 37.8 - (1 - thresholdMultiplier) * 0.6;
+  double get effTempCrit => 38.6 - (1 - thresholdMultiplier) * 0.6;
+  double get effSpo2Warn => (94 + (1 - thresholdMultiplier) * 10).clamp(90, 97);
+  double get effSpo2Crit => (90 + (1 - thresholdMultiplier) * 8).clamp(85, 94);
+  double get effStrainWarn => effectiveProfile().l2;
+  double get effStrainCrit => effectiveProfile().l3;
+
   bool get _highRisk => age >= 60 || riskScore >= 4;
 
   /// The effective wearer [Profile] the pipeline runs on — a base profile with
@@ -160,14 +136,6 @@ class MedicalProfile {
     double? weightKg,
     String? bloodType,
     Set<MedicalCondition>? conditions,
-    double? hrWarn,
-    double? hrCrit,
-    double? tempWarn,
-    double? tempCrit,
-    double? spo2Warn,
-    double? spo2Crit,
-    double? strainWarn,
-    double? strainCrit,
   }) {
     return MedicalProfile(
       name: name ?? this.name,
@@ -177,14 +145,6 @@ class MedicalProfile {
       weightKg: weightKg ?? this.weightKg,
       bloodType: bloodType ?? this.bloodType,
       conditions: conditions ?? this.conditions,
-      hrWarn: hrWarn ?? this.hrWarn,
-      hrCrit: hrCrit ?? this.hrCrit,
-      tempWarn: tempWarn ?? this.tempWarn,
-      tempCrit: tempCrit ?? this.tempCrit,
-      spo2Warn: spo2Warn ?? this.spo2Warn,
-      spo2Crit: spo2Crit ?? this.spo2Crit,
-      strainWarn: strainWarn ?? this.strainWarn,
-      strainCrit: strainCrit ?? this.strainCrit,
     );
   }
 
@@ -193,17 +153,6 @@ class MedicalProfile {
     next.contains(c) ? next.remove(c) : next.add(c);
     return copyWith(conditions: next);
   }
-
-  /// Clears all custom threshold overrides (back to risk-derived defaults).
-  MedicalProfile clearThresholds() => MedicalProfile(
-        name: name,
-        age: age,
-        gender: gender,
-        heightCm: heightCm,
-        weightKg: weightKg,
-        bloodType: bloodType,
-        conditions: conditions,
-      );
 }
 
 /// BMI category label for display.
